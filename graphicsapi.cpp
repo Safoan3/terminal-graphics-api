@@ -162,9 +162,9 @@ void Xspace::line(vec2 p1, vec2 p2, pixel pix, float z1, float z2) {
 
       vec2 pos = {p1.x, (i * sign) + p1.y};
 
-      // setPixel(pos, pix, zz);
+      setPixel(pos, pix, zz);
       //   if (zz < zbuffer[pos.y * res + pos.x]) {
-      setPixel(pos, {pix.a, w1, w2, 1.0f}, zz);
+      // setPixel(pos, {pix.a, w1, w2, 1.0f}, zz);
 
       //     int zbufInd = pos.y * res + pos.x;
       // std::cout << pos.y * res + pos.x << "\n";
@@ -198,10 +198,10 @@ void Xspace::line(vec2 p1, vec2 p2, pixel pix, float z1, float z2) {
 
     vec2 pos = {x, yy + p1.y};
 
-    // setPixel(pos, pix, zz);
+    setPixel(pos, pix, zz);
 
     // if (zz < zbuffer[pos.y * res + pos.x]) {
-    setPixel(pos, {pix.a, w1, 1.0f, w2}, zz);
+    //   setPixel(pos, {pix.a, w1, 1.0f, w2}, zz);
 
     // int zbufInd = pos.y * res + pos.x;
     //  std::cout << pos.y * res + pos.x << "\n";
