@@ -3,22 +3,6 @@
 #include <ostream>
 #include <sstream>
 
-triangle::triangle(vec3df p, vec3df p1, vec3df p2, float rr, float gg, float bb,
-                   float aa) {
-
-  x = p;
-  y = p1;
-  z = p2;
-  r = rr;
-  g = gg;
-  b = bb;
-  a = aa;
-
-  vec3df relx = y - x;
-  vec3df rely = z - x;
-  norm = relx.cross(rely).normalize();
-};
-
 Xspace::Xspace(int r) {
   res = r;
   buffer = (pixel *)malloc(sizeof(pixel) * r * r);
@@ -34,35 +18,30 @@ void Xspace::setCharacterDensityList() {
     z.c = "  ";
   };
 
-  listC[0] = {"  "};
-  listC[1] = {"`'"};
-  listC[2] = {"^!"};
-  listC[3] = {"**"};
-  listC[4] = {"76"};
-  listC[5] = {"$$"};
-  listC[6] = {"aa"};
-  listC[7] = {"&&"};
-  listC[8] = {"##"};
-  listC[9] = {"%@"};
+  listC.push_back({"  "}); // Or just "  "
+  listC.push_back({"`'"});
+  listC.push_back({"^!"});
+  listC.push_back({"**"});
+  listC.push_back({"76"});
+  listC.push_back({"$$"});
+  listC.push_back({"aa"});
+  listC.push_back({"&&"});
+  listC.push_back({"##"});
+  listC.push_back({"%@"});
 };
 
 int Xspace::convDen(float t) {
-  float mul = t * (float)maxCha;
+  float mul = t * (float)listC.size();
   int cp = (int)mul;
   // std::cout << cp << "LOL \n";
-  if (cp > maxCha - 1) {
-    return (maxCha - 1);
+  if (cp > listC.size() - 1) {
+    return (listC.size() - 1);
   }
   return cp;
 };
 
 void Xspace::render() {
-
-  // std::cout << "\n";
-  //  std::cout << "\n";
-
   std::stringstream image;
-  // std::cout << "\033[2J\033[H" << std::flush; // Clear + home + flush
 
   for (int j = 0; j < res; j++) {
     for (int i = 0; i < res; i++) {
@@ -70,14 +49,13 @@ void Xspace::render() {
       pixel selected = buffer[cord];
       int densi = convDen(selected.a);
 
-      if (densi <= maxCha && densi >= 0) {
+      if (densi <= listC.size() && densi >= 0) {
         charac d = listC[densi];
 
         int r = (int)(selected.r * 254 + 1);
         int g = (int)(selected.g * 254 + 1);
         int b = (int)(selected.b * 254 + 1);
 
-        // std::cout << d.c;
         image << "\033[38;2;" << r << ";" << g << ";" << b << "m" << d.c
               << "\033[0m";
 
@@ -88,21 +66,22 @@ void Xspace::render() {
     image << "\n";
   }
   std::cout << image.str();
-
-  // std::cout << "\n";
+  std::cout << "\n";
 };
 
 void Xspace::clear() {
   for (int i = 0; i < res * res; i++) {
     buffer[i].a = 0.0f;
-    buffer[i].r = 0.5f;
-    buffer[i].g = 0.5f;
-    buffer[i].b = 0.5f;
+    buffer[i].r = 0.0f;
+    buffer[i].g = 0.0f;
+    buffer[i].b = 0.0f;
+    buffer[i].alpha = 0.0f;
+
     zbuffer[i] = INFINITY;
   }
 };
 
-void Xspace::setPixel(vec2 xp, pixel cac, float z) {
+void Xspace::setPixel(vec2 xp, pixel cac, float z, bool invert) {
   int y = xp.y;
   int x = xp.x;
 
@@ -112,13 +91,20 @@ void Xspace::setPixel(vec2 xp, pixel cac, float z) {
   }
 
   if ((y * res) + x < res * res) {
-    if (z < zbuffer[(y * res) + x]) {
+    if (z <= zbuffer[(y * res) + x]) {
 
       pixel &l1 = buffer[(((res - 1) - y) * res) + x];
+
+      if (invert == false) {
+        l1 = buffer[y * res + x];
+      }
+
       l1.a = cac.a;
       l1.r = cac.r;
       l1.g = cac.g;
       l1.b = cac.b;
+      l1.alpha = cac.alpha;
+
       zbuffer[(y * res) + x] = z;
     }
   }
@@ -152,9 +138,6 @@ void Xspace::line(vec2 p1, vec2 p2, pixel pix, float z1, float z2) {
       sign = -1;
     }
     for (int i = 0; i < yDist; i++) {
-      // setPixel({p1.x, (i * sign) + p1.y}, pix);
-      //
-
       float w1 = (float)i / (float)yDist;
       float w2 = (1 - w1);
 
@@ -163,15 +146,7 @@ void Xspace::line(vec2 p1, vec2 p2, pixel pix, float z1, float z2) {
       vec2 pos = {p1.x, (i * sign) + p1.y};
 
       setPixel(pos, pix, zz);
-      //   if (zz < zbuffer[pos.y * res + pos.x]) {
       // setPixel(pos, {pix.a, w1, w2, 1.0f}, zz);
-
-      //     int zbufInd = pos.y * res + pos.x;
-      // std::cout << pos.y * res + pos.x << "\n";
-      //   if (zbufInd < res * res) {
-      //      zbuffer[zbufInd] = zz;
-      //    };
-      //   }
     }
   };
 
@@ -199,29 +174,13 @@ void Xspace::line(vec2 p1, vec2 p2, pixel pix, float z1, float z2) {
     vec2 pos = {x, yy + p1.y};
 
     setPixel(pos, pix, zz);
-
-    // if (zz < zbuffer[pos.y * res + pos.x]) {
-    //   setPixel(pos, {pix.a, w1, 1.0f, w2}, zz);
-
-    // int zbufInd = pos.y * res + pos.x;
-    //  std::cout << pos.y * res + pos.x << "\n";
-    // if (zbufInd < res * res) {
-    //   zbuffer[zbufInd] = zz;
-    //    };
-    //  }
-
-    // render();
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // setPixel(pos, {pix.a, w1, w2, 1.0f}, zz);
   }
-  // nitrogen fixation...
-  //
 
   if (p1.x == p2.x && p1.y == p2.y) {
     setPixel(p1, {1.0f, pix.r, pix.g, pix.b}, z1);
     setPixel(p2, {1.0f, pix.r, pix.g, pix.b}, z2);
   }
-  // setPixel(p1, {1.0f, pix.r, pix.g, pix.b});
-  // setPixel(p2, {1.0f, pix.r, pix.g, pix.b});
 };
 
 vec2df barycentric(vec2 cord1, vec2 cord2, vec2 cord3, vec2 point) {
@@ -284,11 +243,6 @@ void Xspace::drawTriangle(const vec2 cord1, const vec2 cord2, const vec2 cord3,
   vec2 pointC = {Xmin, Ymin};
   vec2 pointD = {Xmin, Ym};
 
-  /*
-  line(cord1, cord2);
-  line(cord1, cord3);
-  line(cord2, cord3);
-*/
   d1 = d1 - cord1;
   d2 = d2 - cord1;
   d3 = d3 - cord1;
@@ -326,3 +280,72 @@ void Xspace::drawTriangle(const vec2 cord1, const vec2 cord2, const vec2 cord3,
     }
   }
 };
+
+/// slaughter house
+///
+///
+
+xframe::xframe(Xspace *f) { env = f; };
+
+space::space(vec2 res1) : finalrenderimg(res1.x) {
+  res = {res1.x, res1.y};
+
+  finalrenderimg.clear();
+  finalrenderimg.setCharacterDensityList();
+};
+
+void space::addlayer(xframe *fr) {
+  //
+  frames.push_back(fr);
+};
+
+void space::render() {
+  // xframe *previousFrame;
+  //
+
+  finalrenderimg.clear();
+
+  for (xframe *iif : frames) {
+    int res = iif->env->res;
+
+    for (int j = 0; j < res; j++) {
+      for (int i = 0; i < res; i++) {
+
+        int cord = (res - j - 1) * res + i;
+        pixel selected = iif->env->buffer[cord];
+        float alpha = selected.alpha;
+        float inverseAlpha = 1.0f - alpha;
+        pixel finalPix;
+
+        if (alpha <= 0.01f) {
+          continue;
+        }
+        vec2 newPOs = {iif->positon.x + i, iif->positon.y + j};
+
+        int index =
+            (finalrenderimg.res - newPOs.y - 1) * finalrenderimg.res + newPOs.x;
+        pixel prevPix;
+        if (index >= 0 && index < finalrenderimg.res * finalrenderimg.res) {
+
+          prevPix = finalrenderimg.buffer[(finalrenderimg.res - newPOs.y - 1) *
+                                              finalrenderimg.res +
+                                          newPOs.x];
+        } else {
+          std::cout << "corruption is bad if i am not involved! \n";
+
+          continue;
+        }
+        finalPix.a = selected.a * alpha + prevPix.a * inverseAlpha;
+        finalPix.r = selected.r * alpha + prevPix.r * inverseAlpha;
+        finalPix.g = selected.g * alpha + prevPix.g * inverseAlpha;
+        finalPix.b = selected.b * alpha + prevPix.b * inverseAlpha;
+        finalPix.alpha = 1.0f; // Final image is fully opaque
+
+        //  std::cout << "Pixel: " << finalPix.r << "," << finalPix.g << ","
+        //          << finalPix.b << "\n";
+
+        finalrenderimg.setPixel(newPOs, finalPix);
+      };
+    };
+  }
+}
