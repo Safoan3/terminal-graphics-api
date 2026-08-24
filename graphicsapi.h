@@ -26,14 +26,17 @@ struct pixel {
 };
 
 struct Xspace {
-  int res;
+  vec2 res = {32, 32};
+
   // const int maxCha = 10;
   std::vector<charac> listC;
 
   pixel *buffer;
   float *zbuffer;
 
-  Xspace(int r);
+  Xspace(vec2 res);
+  Xspace(int res);
+
   void setCharacterDensityList();
 
   int convDen(float t);

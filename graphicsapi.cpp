@@ -1,17 +1,19 @@
 #include "graphicsapi.h"
+#include "vectr.h"
 #include <cmath>
 #include <ostream>
 #include <sstream>
 
-Xspace::Xspace(int r) {
-  res = r;
-  buffer = (pixel *)malloc(sizeof(pixel) * r * r);
-  zbuffer = (float *)malloc(sizeof(float) * r * r);
+Xspace::Xspace(vec2 r) : res(r) {
+  buffer = (pixel *)malloc(sizeof(pixel) * r.x * r.y);
+  zbuffer = (float *)malloc(sizeof(float) * r.x * r.y);
 
-  for (int i = 0; i < (r * r); i++) {
+  for (int i = 0; i < (r.x * r.y); i++) {
     zbuffer[i] = INFINITY;
   }
 };
+
+Xspace::Xspace(int r) : Xspace({r, r}) {};
 
 void Xspace::setCharacterDensityList() {
   for (charac z : listC) {
@@ -43,9 +45,9 @@ int Xspace::convDen(float t) {
 void Xspace::render() {
   std::stringstream image;
 
-  for (int j = 0; j < res; j++) {
-    for (int i = 0; i < res; i++) {
-      int cord = j * res + i;
+  for (int j = 0; j < res.y; j++) {
+    for (int i = 0; i < res.x; i++) {
+      int cord = j * res.x + i;
       pixel selected = buffer[cord];
       int densi = convDen(selected.a);
 
@@ -70,7 +72,7 @@ void Xspace::render() {
 };
 
 void Xspace::clear() {
-  for (int i = 0; i < res * res; i++) {
+  for (int i = 0; i < res.x * res.y; i++) {
     buffer[i].a = 0.0f;
     buffer[i].r = 0.0f;
     buffer[i].g = 0.0f;
@@ -85,18 +87,18 @@ void Xspace::setPixel(vec2 xp, pixel cac, float z, bool invert) {
   int y = xp.y;
   int x = xp.x;
 
-  if (y >= 0 && y < res && x >= 0 && x < res) {
+  if (y >= 0 && y < res.y && x >= 0 && x < res.x) {
   } else {
     return;
   }
 
-  if ((y * res) + x < res * res) {
-    if (z <= zbuffer[(y * res) + x]) {
+  if ((y * res.x) + x < res.x * res.y) {
+    if (z <= zbuffer[(y * res.x) + x]) {
 
-      pixel &l1 = buffer[(((res - 1) - y) * res) + x];
+      pixel &l1 = buffer[(((res.y - 1) - y) * res.x) + x];
 
       if (invert == false) {
-        l1 = buffer[y * res + x];
+        l1 = buffer[y * res.x + x];
       }
 
       l1.a = cac.a;
@@ -105,7 +107,7 @@ void Xspace::setPixel(vec2 xp, pixel cac, float z, bool invert) {
       l1.b = cac.b;
       l1.alpha = cac.alpha;
 
-      zbuffer[(y * res) + x] = z;
+      zbuffer[(y * res.x) + x] = z;
     }
   }
 };
@@ -167,7 +169,7 @@ void Xspace::line(vec2 p1, vec2 p2, pixel pix, float z1, float z2) {
       yy = i * slope;
     }
 
-    if (x >= res || p1.y + yy >= res) {
+    if (x >= res.x || p1.y + yy >= res.y) {
       break;
     }
 
@@ -287,7 +289,7 @@ void Xspace::drawTriangle(const vec2 cord1, const vec2 cord2, const vec2 cord3,
 
 xframe::xframe(Xspace *f) { env = f; };
 
-space::space(vec2 res1) : finalrenderimg(res1.x) {
+space::space(vec2 res1) : finalrenderimg(res1) {
   res = {res1.x, res1.y};
 
   finalrenderimg.clear();
@@ -306,12 +308,12 @@ void space::render() {
   finalrenderimg.clear();
 
   for (xframe *iif : frames) {
-    int res = iif->env->res;
+    vec2 res = iif->env->res;
 
-    for (int j = 0; j < res; j++) {
-      for (int i = 0; i < res; i++) {
+    for (int j = 0; j < res.y; j++) {
+      for (int i = 0; i < res.x; i++) {
 
-        int cord = (res - j - 1) * res + i;
+        int cord = (res.y - j - 1) * res.x + i;
         pixel selected = iif->env->buffer[cord];
         float alpha = selected.alpha;
         float inverseAlpha = 1.0f - alpha;
@@ -323,13 +325,15 @@ void space::render() {
         vec2 newPOs = {iif->positon.x + i, iif->positon.y + j};
 
         int index =
-            (finalrenderimg.res - newPOs.y - 1) * finalrenderimg.res + newPOs.x;
+            (finalrenderimg.res.y - newPOs.y - 1) * finalrenderimg.res.x +
+            newPOs.x;
         pixel prevPix;
-        if (index >= 0 && index < finalrenderimg.res * finalrenderimg.res) {
+        if (index >= 0 && index < finalrenderimg.res.y * finalrenderimg.res.x) {
 
-          prevPix = finalrenderimg.buffer[(finalrenderimg.res - newPOs.y - 1) *
-                                              finalrenderimg.res +
-                                          newPOs.x];
+          prevPix =
+              finalrenderimg.buffer[(finalrenderimg.res.y - newPOs.y - 1) *
+                                        finalrenderimg.res.x +
+                                    newPOs.x];
         } else {
           std::cout << "corruption is bad if i am not involved! \n";
 
