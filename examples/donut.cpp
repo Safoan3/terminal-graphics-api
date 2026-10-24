@@ -10,19 +10,13 @@
 #include "../graphicsapi.h"
 
 #include <iostream>
+#include <thread>
 #include <vector>
 
 const float pi = 3.14159265f;
 const int resolution = 32;
 
 Xspace env(resolution);
-
-struct color {
-  float a;
-  float r;
-  float g;
-  float b;
-};
 
 struct camera {
   vec3df position;
